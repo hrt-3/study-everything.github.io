@@ -1,13 +1,9 @@
-/**
- * 日本語フォント (M PLUS 1p) の Base64 データ
- * これを jsPDF に読み込ませることで、PDF内で日本語が使用可能になります。
- * データが非常に長いため、コードの可読性のために変数に格納しています。
- */
-const mplus1pRegularFont = '...'; // (注: 実際のBase64データは非常に長いため、ここに表示すると見づらくなります。実際のコードでは完全なデータが含まれています)
-
 // PDF生成ボタンとローディング表示の要素を取得
 const generatePdfBtn = document.getElementById('generate-pdf-btn');
 const loadingIndicator = document.getElementById('loading');
+
+// 読み込んだフォントデータを保存しておくための変数（初回のみ読み込む）
+let mplus1pRegularFont = null;
 
 /**
  * 2つの配列をシャッフルする関数（Fisher-Yatesアルゴリズム）
@@ -107,6 +103,20 @@ generatePdfBtn.addEventListener('click', async () => {
     await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
+        // --- ★★★ここからが変更点★★★ ---
+        // まだフォントを読み込んでいなければ、インターネットから取得する
+        if (!mplus1pRegularFont) {
+            console.log('フォントデータを読み込んでいます...');
+            const fontUrl = 'https://cdn.jsdelivr.net/gh/MrRio/jsPDF/test/reference/Mplus-1p-regular.ttf.base64';
+            const response = await fetch(fontUrl);
+            if (!response.ok) {
+                throw new Error(`フォントの読み込みに失敗しました: ${response.statusText}`);
+            }
+            mplus1pRegularFont = await response.text();
+            console.log('フォントデータの読み込みが完了しました。');
+        }
+        // --- ★★★変更点はここまで★★★ ---
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
@@ -145,7 +155,7 @@ generatePdfBtn.addEventListener('click', async () => {
 
     } catch (error) {
         console.error('PDFの生成中にエラーが発生しました:', error);
-        alert('PDFの生成に失敗しました。コンソールを確認してください。');
+        alert('PDFの生成に失敗しました。ネットワーク接続を確認するか、しばらくしてからもう一度お試しください。');
     } finally {
         // ローディング表示を終了し、ボタンを有効化
         loadingIndicator.classList.add('hidden');
@@ -153,21 +163,4 @@ generatePdfBtn.addEventListener('click', async () => {
         generatePdfBtn.textContent = 'PDFを作成する';
     }
 });
-
-// フォントデータ（Base64）のプレースホルダーを実際のデータに置き換える
-// 注意：このデータは非常に長大です
-const actualFontData = "AAEAAAARAQAABAAQRFNJRwAAAAAAA...（以下、数万文字のデータが続く）...";
-// 実際のアプリケーションでは、この `actualFontData` 変数を `mplus1pRegularFont` の代わりに使います。
-// 可読性のため、ここでは省略していますが、実際の動作にはこの巨大な文字列が必要です。
-// ファイルを分けるか、モジュールとして読み込むのが一般的です。
-// このスニペットでは、概念を説明するためにプレースホルダーを使用しています。
-// 実行可能なコードでは、この部分に実際のBase64文字列が入っているものとして扱います。
-// ここでは仮に短い文字列を代入しておきます。
-if (typeof mplus1pRegularFont !== 'undefined' && mplus1pRegularFont === '...') {
-    // 開発者向け注記: この部分はデモ用のダミーです。
-    // 実際のフォントデータは非常に長いため、別途読み込むか、
-    // ビルドプロセスでここに埋め込む必要があります。
-    // 簡単なテスト用に、アラートを表示します。
-    console.warn("日本語フォントデータがロードされていません。PDFの日本語は文字化けします。");
-}
 
