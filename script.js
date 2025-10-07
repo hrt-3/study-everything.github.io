@@ -2,9 +2,6 @@
 const generatePdfBtn = document.getElementById('generate-pdf-btn');
 const loadingIndicator = document.getElementById('loading');
 
-// 読み込んだフォントデータを保存しておくための変数（初回のみ読み込む）
-let mplus1pRegularFont = null;
-
 /**
  * 2つの配列をシャッフルする関数（Fisher-Yatesアルゴリズム）
  * @param {Array} array シャッフルしたい配列
@@ -48,82 +45,74 @@ const drawGrid = (doc, title, topNumbers, sideNumbers, operation, showAnswers) =
     const startY = 40;
     const cellSize = 18;
     const gridSize = 10;
+
     doc.setFontSize(14);
     doc.setLineWidth(0.2);
 
     // 左上の計算記号
     doc.text(opSymbol, startX + cellSize / 2, startY + cellSize / 2 + 5, { align: 'center' });
 
-    // グリッドと数字を描画
+
+    // グリッドの線と数字を描画
     for (let i = 0; i <= gridSize; i++) {
-        for (let j = 0; j <= gridSize; j++) {
-            const x = startX + j * cellSize;
-            const y = startY + i * cellSize;
-            doc.rect(x, y, cellSize, cellSize);
+        // 横線
+        doc.line(startX, startY + i * cellSize, startX + (gridSize + 1) * cellSize, startY + i * cellSize);
+        // 縦線
+        doc.line(startX + i * cellSize, startY, startX + i * cellSize, startY + (gridSize + 1) * cellSize);
 
-            let text = '';
-            // 上辺の数字
-            if (i === 0 && j > 0) {
-                text = topNumbers[j - 1].toString();
-            }
-            // 左辺の数字
-            else if (j === 0 && i > 0) {
-                text = sideNumbers[i - 1].toString();
-            }
-            // 解答欄
-            else if (i > 0 && j > 0 && showAnswers) {
-                const num1 = topNumbers[j - 1];
-                const num2 = sideNumbers[i - 1];
-                let answer = 0;
+        // 上辺の数字
+        if (i < gridSize) {
+            doc.text(topNumbers[i].toString(), startX + (i + 1.5) * cellSize, startY + cellSize / 2 + 5, { align: 'center' });
+        }
+        // 左辺の数字
+        if (i < gridSize) {
+            doc.text(sideNumbers[i].toString(), startX + cellSize / 2, startY + (i + 1.5) * cellSize + 5, { align: 'center' });
+        }
+    }
+
+    // 解答をマス目に書き込む
+    if (showAnswers) {
+        doc.setFontSize(12);
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                let answer;
+                const topNum = topNumbers[j];
+                const sideNum = sideNumbers[i];
+
                 if (operation === 'add') {
-                    answer = num1 + num2;
+                    answer = topNum + sideNum;
                 } else if (operation === 'subtract') {
-                    answer = num1 - num2; // 引き算用に数字が調整されている前提
+                    answer = topNum - sideNum;
                 } else if (operation === 'multiply') {
-                    answer = num1 * num2;
+                    answer = topNum * sideNum;
                 }
-                text = answer.toString();
-            }
 
-            if (text) {
-                doc.text(text, x + cellSize / 2, y + cellSize / 2 + 5, { align: 'center' });
+                if (answer !== undefined) {
+                    doc.text(answer.toString(), startX + (j + 1.5) * cellSize, startY + (i + 1.5) * cellSize + 5, { align: 'center' });
+                }
             }
         }
     }
 };
 
-// --- メインの処理 ---
-generatePdfBtn.addEventListener('click', async () => {
-    // ローディング表示を開始し、ボタンを無効化
-    loadingIndicator.classList.remove('hidden');
-    generatePdfBtn.disabled = true;
-    generatePdfBtn.textContent = '生成中...';
 
-    // 非同期処理でUIのフリーズを防ぐ
-    await new Promise(resolve => setTimeout(resolve, 50));
+/**
+ * PDFを生成する非同期関数
+ */
+const generatePdf = async () => {
+    // ローディング表示を開始
+    loadingIndicator.classList.remove('hidden');
 
     try {
-        // --- ★★★ここからが変更点★★★ ---
-        // まだフォントを読み込んでいなければ、インターネットから取得する
-        if (!mplus1pRegularFont) {
-            console.log('フォントデータを読み込んでいます...');
-            const fontUrl = 'https://cdn.jsdelivr.net/gh/MrRio/jsPDF/test/reference/Mplus-1p-regular.ttf.base64';
-            const response = await fetch(fontUrl);
-            if (!response.ok) {
-                throw new Error(`フォントの読み込みに失敗しました: ${response.statusText}`);
-            }
-            mplus1pRegularFont = await response.text();
-            console.log('フォントデータの読み込みが完了しました。');
-        }
-        // --- ★★★変更点はここまで★★★ ---
-
+        // jsPDFのインスタンスを生成
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // VFS (Virtual File System) にフォントデータを追加
-        doc.addFileToVFS('Mplus1p-Regular.ttf', mplus1pRegularFont);
-        // フォントを追加
+        // フォントをVFSに追加してjsPDFで使えるようにする
+        // MPLUS1p-Regular-normal.jsで定義されているグローバル変数 `font` を使用
+        doc.addFileToVFS('Mplus1p-Regular.ttf', font);
         doc.addFont('Mplus1p-Regular.ttf', 'Mplus1p-Regular', 'normal');
+
 
         // ユーザーの選択を取得
         const operation = document.querySelector('input[name="operation"]:checked').value;
@@ -151,16 +140,16 @@ generatePdfBtn.addEventListener('click', async () => {
         }
 
         // PDFを保存
-        doc.save('hyakumasu-keisan-custom.pdf');
+        doc.save('hyakumasu-keisan.pdf');
 
     } catch (error) {
-        console.error('PDFの生成中にエラーが発生しました:', error);
-        alert('PDFの生成に失敗しました。ネットワーク接続を確認するか、しばらくしてからもう一度お試しください。');
+        console.error('PDF生成中にエラーが発生しました:', error);
+        alert('PDF生成中にエラーが発生しました。コンソールを確認してください。');
     } finally {
-        // ローディング表示を終了し、ボタンを有効化
+        // ローディング表示を終了
         loadingIndicator.classList.add('hidden');
-        generatePdfBtn.disabled = false;
-        generatePdfBtn.textContent = 'PDFを作成する';
     }
-});
+};
 
+// ボタンにクリックイベントを追加
+generatePdfBtn.addEventListener('click', generatePdf);
