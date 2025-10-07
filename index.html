@@ -2,15 +2,22 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>百ます計算ジェネレーター</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百ます計算 PDFジェネレーター</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>百ます計算 PDFジェネレーター</h1>
-    <p>下のボタンを押すと、ランダムな問題のPDFが作成されます。</p>
-    <button id="generate-pdf">PDFを作成する</button>
 
+    <main class="container">
+        <h1>百ます計算 PDFジェネレーター</h1>
+        <p>下のボタンを押すと、ランダムな問題のPDFが自動で作成・ダウンロードされます。</p>
+        <button id="generate-pdf-btn">PDFを作成する</button>
+    </main>
+
+    <!-- 外部ライブラリと自作スクリプトの読み込み -->
+    <!-- PDF生成のためのライブラリ(jsPDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- メインの処理を書くファイル -->
     <script src="script.js"></script>
 </body>
 </html>
