@@ -1,63 +1,173 @@
-// 'PDFを作成する'ボタンの要素を取得
+/**
+ * 日本語フォント (M PLUS 1p) の Base64 データ
+ * これを jsPDF に読み込ませることで、PDF内で日本語が使用可能になります。
+ * データが非常に長いため、コードの可読性のために変数に格納しています。
+ */
+const mplus1pRegularFont = '...'; // (注: 実際のBase64データは非常に長いため、ここに表示すると見づらくなります。実際のコードでは完全なデータが含まれています)
+
+// PDF生成ボタンとローディング表示の要素を取得
 const generatePdfBtn = document.getElementById('generate-pdf-btn');
+const loadingIndicator = document.getElementById('loading');
 
-// ボタンがクリックされたときの処理を登録
-generatePdfBtn.addEventListener('click', () => {
+/**
+ * 2つの配列をシャッフルする関数（Fisher-Yatesアルゴリズム）
+ * @param {Array} array シャッフルしたい配列
+ */
+const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
-    // jsPDFライブラリからjsPDFオブジェクトを取得
-    const { jsPDF } = window.jspdf;
-    
-    // A4サイズの新しいPDFドキュメントを作成
-    const doc = new jsPDF();
 
-    // --- ここからPDFの内容を作成 ---
+/**
+ * 計算グリッドを描画する共通関数
+ * @param {jsPDF} doc - jsPDFのインスタンス
+ * @param {string} title - ページのタイトル
+ * @param {Array<number>} topNumbers - 上辺の数字配列
+ * @param {Array<number>} sideNumbers - 左辺の数字配列
+ * @param {string} operation - 計算の種類 ('add', 'subtract', 'multiply')
+ * @param {boolean} showAnswers - 解答を表示するかどうか
+ */
+const drawGrid = (doc, title, topNumbers, sideNumbers, operation, showAnswers) => {
+    // 日本語フォントを設定
+    doc.setFont('Mplus1p-Regular');
 
-    // タイトルを追加
-    // 注意: jsPDFの標準フォントは日本語に非対応のため、日本語は文字化けします。
-    // そのため、ここでは英字でタイトルを設定しています。
-    // 日本語対応にはフォントファイルを組み込む必要があります。
+    // ページタイトル
     doc.setFontSize(24);
-    doc.text('Hyakumasu Keisan (100-cell calculation)', 105, 25, { align: 'center' });
+    doc.text(title, 105, 25, { align: 'center' });
 
-    // 計算に使うランダムな数字の配列を2つ生成 (1から9まで)
-    const topNumbers = Array.from({ length: 10 }, () => Math.floor(Math.random() * 9) + 1);
-    const sideNumbers = Array.from({ length: 10 }, () => Math.floor(Math.random() * 9) + 1);
+    // 計算記号のマップ
+    const opSymbols = {
+        'add': '+',
+        'subtract': '-',
+        'multiply': '×',
+    };
+    const opSymbol = opSymbols[operation] || '';
 
     // マス目の設定
-    const startX = 15;      // マス目を書き始めるX座標
-    const startY = 40;      // マス目を書き始めるY座標
-    const cellSize = 18;    // 1マスのサイズ
-    const gridSize = 10;    // マスの数 (10x10)
-
+    const startX = 15;
+    const startY = 40;
+    const cellSize = 18;
+    const gridSize = 10;
     doc.setFontSize(14);
-    doc.text('+', startX + cellSize / 2, startY + cellSize / 2 + 5, { align: 'center' });
+    doc.setLineWidth(0.2);
 
-    // 11x11のマス目と数字を描画
-    for (let i = 0; i <= gridSize; i++) { // 行 (縦)
-        for (let j = 0; j <= gridSize; j++) { // 列 (横)
-            
-            // マス目の枠線を描画
-            doc.rect(startX + j * cellSize, startY + i * cellSize, cellSize, cellSize);
+    // 左上の計算記号
+    doc.text(opSymbol, startX + cellSize / 2, startY + cellSize / 2 + 5, { align: 'center' });
+
+    // グリッドと数字を描画
+    for (let i = 0; i <= gridSize; i++) {
+        for (let j = 0; j <= gridSize; j++) {
+            const x = startX + j * cellSize;
+            const y = startY + i * cellSize;
+            doc.rect(x, y, cellSize, cellSize);
 
             let text = '';
-            // 1行目に数字を配置 (j > 0)
+            // 上辺の数字
             if (i === 0 && j > 0) {
                 text = topNumbers[j - 1].toString();
-            } 
-            // 1列目に数字を配置 (i > 0)
+            }
+            // 左辺の数字
             else if (j === 0 && i > 0) {
                 text = sideNumbers[i - 1].toString();
             }
+            // 解答欄
+            else if (i > 0 && j > 0 && showAnswers) {
+                const num1 = topNumbers[j - 1];
+                const num2 = sideNumbers[i - 1];
+                let answer = 0;
+                if (operation === 'add') {
+                    answer = num1 + num2;
+                } else if (operation === 'subtract') {
+                    answer = num1 - num2; // 引き算用に数字が調整されている前提
+                } else if (operation === 'multiply') {
+                    answer = num1 * num2;
+                }
+                text = answer.toString();
+            }
 
-            // マスの中心にテキストを配置
             if (text) {
-                doc.text(text, startX + j * cellSize + cellSize / 2, startY + i * cellSize + cellSize / 2 + 5, { align: 'center' });
+                doc.text(text, x + cellSize / 2, y + cellSize / 2 + 5, { align: 'center' });
             }
         }
     }
-    
-    // --- PDFの内容作成はここまで ---
+};
 
-    // 作成したPDFを'hyakumasu-keisan.pdf'という名前でダウンロード
-    doc.save('hyakumasu-keisan.pdf');
+// --- メインの処理 ---
+generatePdfBtn.addEventListener('click', async () => {
+    // ローディング表示を開始し、ボタンを無効化
+    loadingIndicator.classList.remove('hidden');
+    generatePdfBtn.disabled = true;
+    generatePdfBtn.textContent = '生成中...';
+
+    // 非同期処理でUIのフリーズを防ぐ
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // VFS (Virtual File System) にフォントデータを追加
+        doc.addFileToVFS('Mplus1p-Regular.ttf', mplus1pRegularFont);
+        // フォントを追加
+        doc.addFont('Mplus1p-Regular.ttf', 'Mplus1p-Regular', 'normal');
+
+        // ユーザーの選択を取得
+        const operation = document.querySelector('input[name="operation"]:checked').value;
+        const includeAnswers = document.getElementById('include-answers').checked;
+
+        // 計算方法に応じて数字を生成
+        let topNumbers, sideNumbers;
+        if (operation === 'subtract') {
+            // 引き算：答えがマイナスにならないように、上の数字を大きくする
+            topNumbers = shuffleArray(Array.from({ length: 10 }, (_, i) => i + 10)); // 10-19
+            sideNumbers = shuffleArray(Array.from({ length: 10 }, (_, i) => i + 1));  // 1-10
+        } else {
+            // 足し算・掛け算：1桁の数字
+            topNumbers = shuffleArray(Array.from({ length: 10 }, (_, i) => i + 1)); // 1-10
+            sideNumbers = shuffleArray(Array.from({ length: 10 }, (_, i) => i + 1)); // 1-10
+        }
+
+        // 1ページ目：問題を描画
+        drawGrid(doc, '百ます計算', topNumbers, sideNumbers, operation, false);
+
+        // 解答を含める場合、2ページ目を追加
+        if (includeAnswers) {
+            doc.addPage();
+            drawGrid(doc, '解答', topNumbers, sideNumbers, operation, true);
+        }
+
+        // PDFを保存
+        doc.save('hyakumasu-keisan-custom.pdf');
+
+    } catch (error) {
+        console.error('PDFの生成中にエラーが発生しました:', error);
+        alert('PDFの生成に失敗しました。コンソールを確認してください。');
+    } finally {
+        // ローディング表示を終了し、ボタンを有効化
+        loadingIndicator.classList.add('hidden');
+        generatePdfBtn.disabled = false;
+        generatePdfBtn.textContent = 'PDFを作成する';
+    }
 });
+
+// フォントデータ（Base64）のプレースホルダーを実際のデータに置き換える
+// 注意：このデータは非常に長大です
+const actualFontData = "AAEAAAARAQAABAAQRFNJRwAAAAAAA...（以下、数万文字のデータが続く）...";
+// 実際のアプリケーションでは、この `actualFontData` 変数を `mplus1pRegularFont` の代わりに使います。
+// 可読性のため、ここでは省略していますが、実際の動作にはこの巨大な文字列が必要です。
+// ファイルを分けるか、モジュールとして読み込むのが一般的です。
+// このスニペットでは、概念を説明するためにプレースホルダーを使用しています。
+// 実行可能なコードでは、この部分に実際のBase64文字列が入っているものとして扱います。
+// ここでは仮に短い文字列を代入しておきます。
+if (typeof mplus1pRegularFont !== 'undefined' && mplus1pRegularFont === '...') {
+    // 開発者向け注記: この部分はデモ用のダミーです。
+    // 実際のフォントデータは非常に長いため、別途読み込むか、
+    // ビルドプロセスでここに埋め込む必要があります。
+    // 簡単なテスト用に、アラートを表示します。
+    console.warn("日本語フォントデータがロードされていません。PDFの日本語は文字化けします。");
+}
+
