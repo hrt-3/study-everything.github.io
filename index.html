@@ -3,21 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百ます計算 PDFジェネレーター</title>
+    <title>高機能版 百ます計算 PDFジェネレーター</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <main class="container">
-        <h1>百ます計算 PDFジェネレーター</h1>
-        <p>下のボタンを押すと、ランダムな問題のPDFが自動で作成・ダウンロードされます。</p>
+        <h1>高機能版 百ます計算 PDFジェネレーター</h1>
+        <p>お好みの計算方法を選んで、オリジナルの問題を作成しましょう。</p>
+
+        <div class="options">
+            <fieldset>
+                <legend>計算の種類</legend>
+                <div class="radio-group">
+                    <label><input type="radio" name="operation" value="add" checked> 足し算</label>
+                    <label><input type="radio" name="operation" value="subtract"> 引き算</label>
+                    <label><input type="radio" name="operation" value="multiply"> 掛け算</label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>オプション</legend>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="include-answers" checked>
+                    解答を2ページ目に含める
+                </label>
+            </fieldset>
+        </div>
+
         <button id="generate-pdf-btn">PDFを作成する</button>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>PDFを生成中です...</p>
+        </div>
     </main>
 
     <!-- 外部ライブラリと自作スクリプトの読み込み -->
-    <!-- PDF生成のためのライブラリ(jsPDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- メインの処理を書くファイル -->
     <script src="script.js"></script>
 </body>
 </html>
+
