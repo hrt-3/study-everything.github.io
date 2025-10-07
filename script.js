@@ -1,40 +1,63 @@
-// window.jspdf.jsPDF のようにアクセスできるようにする
-window.jsPDF = window.jspdf.jsPDF;
+// 'PDFを作成する'ボタンの要素を取得
+const generatePdfBtn = document.getElementById('generate-pdf-btn');
 
-// "PDFを作成する"ボタンが押されたときの処理
-document.getElementById('generate-pdf').addEventListener('click', () => {
-    // 1. 新しいPDFドキュメントを作成
+// ボタンがクリックされたときの処理を登録
+generatePdfBtn.addEventListener('click', () => {
+
+    // jsPDFライブラリからjsPDFオブジェクトを取得
+    const { jsPDF } = window.jspdf;
+    
+    // A4サイズの新しいPDFドキュメントを作成
     const doc = new jsPDF();
 
-    // 2. 百ます計算の問題を生成するロジック（ここは簡略版）
-    const numbers1 = Array.from({length: 10}, () => Math.floor(Math.random() * 9) + 1);
-    const numbers2 = Array.from({length: 10}, () => Math.floor(Math.random() * 9) + 1);
+    // --- ここからPDFの内容を作成 ---
 
-    // 3. PDFにタイトルを書き込む
-    doc.setFontSize(22);
-    doc.text("百ます計算", 105, 20, { align: 'center' });
-    
-    // 4. PDFにマス目と数字を書き込む
-    doc.setFontSize(12);
-    const startX = 20;
-    const startY = 40;
-    const cellWidth = 15;
+    // タイトルを追加
+    // 注意: jsPDFの標準フォントは日本語に非対応のため、日本語は文字化けします。
+    // そのため、ここでは英字でタイトルを設定しています。
+    // 日本語対応にはフォントファイルを組み込む必要があります。
+    doc.setFontSize(24);
+    doc.text('Hyakumasu Keisan (100-cell calculation)', 105, 25, { align: 'center' });
 
-    for (let i = 0; i < 11; i++) {
-        for (let j = 0; j < 11; j++) {
-            doc.rect(startX + j * cellWidth, startY + i * cellWidth, cellWidth, cellWidth); // マス目を描画
+    // 計算に使うランダムな数字の配列を2つ生成 (1から9まで)
+    const topNumbers = Array.from({ length: 10 }, () => Math.floor(Math.random() * 9) + 1);
+    const sideNumbers = Array.from({ length: 10 }, () => Math.floor(Math.random() * 9) + 1);
+
+    // マス目の設定
+    const startX = 15;      // マス目を書き始めるX座標
+    const startY = 40;      // マス目を書き始めるY座標
+    const cellSize = 18;    // 1マスのサイズ
+    const gridSize = 10;    // マスの数 (10x10)
+
+    doc.setFontSize(14);
+    doc.text('+', startX + cellSize / 2, startY + cellSize / 2 + 5, { align: 'center' });
+
+    // 11x11のマス目と数字を描画
+    for (let i = 0; i <= gridSize; i++) { // 行 (縦)
+        for (let j = 0; j <= gridSize; j++) { // 列 (横)
+            
+            // マス目の枠線を描画
+            doc.rect(startX + j * cellSize, startY + i * cellSize, cellSize, cellSize);
+
             let text = '';
-            if (i > 0 && j > 0) {
-                // 回答欄なので空欄
-            } else if (i === 0 && j > 0) {
-                text = numbers1[j-1].toString();
-            } else if (j === 0 && i > 0) {
-                text = numbers2[i-1].toString();
+            // 1行目に数字を配置 (j > 0)
+            if (i === 0 && j > 0) {
+                text = topNumbers[j - 1].toString();
+            } 
+            // 1列目に数字を配置 (i > 0)
+            else if (j === 0 && i > 0) {
+                text = sideNumbers[i - 1].toString();
             }
-            doc.text(text, startX + j * cellWidth + 7.5, startY + i * cellWidth + 9, { align: 'center' });
+
+            // マスの中心にテキストを配置
+            if (text) {
+                doc.text(text, startX + j * cellSize + cellSize / 2, startY + i * cellSize + cellSize / 2 + 5, { align: 'center' });
+            }
         }
     }
+    
+    // --- PDFの内容作成はここまで ---
 
-    // 5. PDFファイルを保存する
+    // 作成したPDFを'hyakumasu-keisan.pdf'という名前でダウンロード
     doc.save('hyakumasu-keisan.pdf');
 });
