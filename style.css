@@ -120,4 +120,3 @@ button:hover {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
-
